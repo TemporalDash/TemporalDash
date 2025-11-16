@@ -81,6 +81,22 @@ protected:
 	/** Set up input action bindings */
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	
+	// --- Double-jump support ---
+	/** Maximum number of jumps allowed before landing (set to 2 for double-jump) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta=(AllowPrivateAccess="true"))
+	int32 MaxJumpCount;
+
+	/** Current number of performed jumps since last grounded */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement", meta=(AllowPrivateAccess="true"))
+	int32 JumpCount;
+
+	/** Upwards boost applied when performing an extra (mid-air) jump */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta=(AllowPrivateAccess="true"))
+	float SecondJumpStrength;
+
+	/** Reset jump counter when landing */
+	virtual void Landed(const FHitResult& Hit) override;
+	
 
 public:
 
