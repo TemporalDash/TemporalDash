@@ -12,6 +12,9 @@
 
 ATemporalDashCharacter::ATemporalDashCharacter()
 {
+	// Enable Tick for dash linear decay
+	PrimaryActorTick.bCanEverTick = true;
+
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
 	

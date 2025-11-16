@@ -49,6 +49,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category ="Input")
 	class UInputAction* MouseLookAction;
 	
+	/** Dash Input Action */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* DashAction;
+	
 public:
 	ATemporalDashCharacter();
 
@@ -76,7 +80,46 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
 
+	// --- Dash support ---
+	/** Distance the dash should cover (used together with Duration to compute speed) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash", meta=(AllowPrivateAccess="true", ClampMin = "0.0"))
+	float DashDistance = 600.0f;
+
+	/** How long the dash impulse lasts (seconds) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash", meta=(AllowPrivateAccess="true", ClampMin = "0.01"))
+	float DashDuration = 0.2f;
+
+	/** Cooldown between dashes (seconds) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash", meta=(AllowPrivateAccess="true", ClampMin = "0.0"))
+	float DashCooldown = 1.0f;
+
+	/** Whether the character is currently dashing */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dash", meta=(AllowPrivateAccess="true"))
+	bool bIsDashing = false;
+
+	// Timer handle for dash cooldown
+	FTimerHandle DashCooldownHandle;
+
+	// Runtime dash state for linear decay
+	FVector DashDirection;
+	float DashTimeRemaining = 0.f;
+	float DashInitialSpeed = 0.f;
+
+	// Input handler for the dash (bind to ETriggerEvent::Started)
+	void DoDashStart(const FInputActionValue& ActionValue);
+
+	// Internal helpers
+	void PerformDash(const FVector& Direction);
+	void EndDash();
+	void ResetDashCooldown();
+
 protected:
+
+	/** Called when the game starts or when spawned */
+	virtual void BeginPlay() override;
+
+	/** Called every frame */
+	virtual void Tick(float DeltaTime) override;
 
 	/** Set up input action bindings */
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
