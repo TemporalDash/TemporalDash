@@ -104,10 +104,11 @@ protected:
 	// Timer handle for dash cooldown
 	FTimerHandle DashCooldownHandle;
 
-	// Runtime dash state for linear decay
+	// Runtime dash state for smooth velocity interpolation
 	FVector DashDirection;
 	float DashTimeRemaining = 0.f;
 	float DashInitialSpeed = 0.f;
+	FVector DashTargetVelocity;
 
 	// Input handler for the dash (bind to ETriggerEvent::Started)
 	void DoDashStart(const FInputActionValue& ActionValue);
