@@ -53,6 +53,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* DashAction;
 	
+	/** Hook Input Action */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* Hook;
+
 public:
 	ATemporalDashCharacter();
 
@@ -112,6 +116,47 @@ protected:
 	void PerformDash(const FVector& Direction);
 	void EndDash();
 	void ResetDashCooldown();
+
+
+	// --- Hook Support ---
+	/** Maximum range to detect hook points */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hook", meta=(AllowPrivateAccess="true", ClampMin = "0.0"))
+	float HookMaxRange = 5000.0f;
+
+	/** Pull strength towards hook point (higher = faster pull) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hook", meta=(AllowPrivateAccess="true", ClampMin = "0.0"))
+	float HookPullStrength = 3000.0f;
+
+	/** How much player input affects tangential movement during hook (0-1) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hook", meta=(AllowPrivateAccess="true", ClampMin = "0.0", ClampMax = "1.0"))
+	float HookSteeringInfluence = 0.3f;
+
+	/** Minimum distance to auto-detach from hook point */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hook", meta=(AllowPrivateAccess="true", ClampMin = "0.0"))
+	float HookMinDetachDistance = 150.0f;
+
+	/** Maximum velocity magnitude during hook (prevents infinite acceleration) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hook", meta=(AllowPrivateAccess="true", ClampMin = "0.0"))
+	float HookMaxVelocity = 4000.0f;
+
+	/** Whether the character is currently hooked */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hook", meta=(AllowPrivateAccess="true"))
+	bool bIsHooked = false;
+
+	// Runtime hook state
+	FVector HookPoint;
+	float HookMaxRopeLength = 0.f;
+	FVector LastMovementInput;  // Cache player input direction
+
+	// Input handlers
+	void DoHookStart(const FInputActionValue& ActionValue);
+	void DoHookEnd(const FInputActionValue& ActionValue);
+
+	// Internal helpers
+	bool FindHookPoint(FVector& OutHitLocation);
+	void PerformHook();
+	void UpdateHookMovement(float DeltaTime);
+	void EndHook();
 
 protected:
 
