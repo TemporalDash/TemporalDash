@@ -34,10 +34,10 @@ public:
     float CardWidth = 200.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cards")
-    float Overlap = 120.f;
+    float Overlap = 160.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cards")
-    float HighlightOverlap = 60.f;
+    float HighlightOverlap = 20.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cards")
     float MoveSpeed = 10.f;

@@ -2,6 +2,7 @@
 
 #include "OverlappedCardWidget.h"
 #include "Components/CanvasPanelSlot.h"
+#include <Kismet/KismetSystemLibrary.h>
 
 UOverlappedCardWidget::UOverlappedCardWidget(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -127,10 +128,7 @@ void UOverlappedCardWidget::NativeTick(const FGeometry& MyGeometry, float InDelt
 
         CanvasSlot->SetPosition(NewPos);
 
-        if (i == HighlightIndex)
-            CanvasSlot->SetZOrder(999);
-        else
-            CanvasSlot->SetZOrder(i);
+        CanvasSlot->SetZOrder(i);
     }
 }
 
