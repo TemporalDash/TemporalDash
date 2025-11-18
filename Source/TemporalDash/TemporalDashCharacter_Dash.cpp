@@ -103,7 +103,11 @@ void ATemporalDashCharacter::PerformDash(const FVector& Direction)
 	// Store dash parameters for Tick to apply
 	DashDirection = FVector(Dir.X, Dir.Y, 0.f).GetSafeNormal(); // Horizontal only
 	DashTimeRemaining = DashDuration;
-	DashInitialSpeed = DashDistance / DashDuration; // Speed at start of dash
+	
+	// Calculate target speed and velocity for smooth interpolation
+	float TargetSpeed = DashDistance / DashDuration;
+	DashTargetVelocity = DashDirection * TargetSpeed;
+	DashInitialSpeed = TargetSpeed; // Keep for reference
 	
 	bIsDashing = true;
 
@@ -150,19 +154,46 @@ void ATemporalDashCharacter::Tick(float DeltaTime)
 	// Update Dash
 	if (bIsDashing && DashTimeRemaining > 0.f)
 	{
-		// Linear decay: speed decreases from DashInitialSpeed to 0 over DashDuration
-		float Alpha = DashTimeRemaining / DashDuration; // 1.0 at start, 0.0 at end
-		float CurrentSpeed = DashInitialSpeed * Alpha;
-
-		// Apply velocity in dash direction
-		FVector DashVelocity = DashDirection * CurrentSpeed;
-		
-		// Preserve vertical velocity (jumping/falling)
-		if (GetCharacterMovement())
+		if (UCharacterMovementComponent* Movement = GetCharacterMovement())
 		{
-			FVector CurrentVelocity = GetCharacterMovement()->Velocity;
-			DashVelocity.Z = CurrentVelocity.Z;
-			GetCharacterMovement()->Velocity = DashVelocity;
+			FVector CurrentVelocity = Movement->Velocity;
+			
+			// Calculate progress: 0→1 over dash duration
+			float Alpha = 1.f - (DashTimeRemaining / DashDuration);
+			FVector TargetVel;
+			
+			// Phase 1: Accelerate to target velocity (first 20% of dash duration)
+			// Phase 2: Maintain target velocity (middle 60%)
+			// Phase 3: Decelerate to zero (last 20%)
+			if (Alpha < 0.2f)
+			{
+				// Accelerate: 0→100% over first 20%
+				float AccelAlpha = Alpha / 0.2f;
+				TargetVel = DashTargetVelocity * AccelAlpha;
+			}
+			else if (Alpha < 0.8f)
+			{
+				// Maintain: 100% speed
+				TargetVel = DashTargetVelocity;
+			}
+			else
+			{
+				// Decelerate: 100%→0% over last 20%
+				float DecelAlpha = (1.f - Alpha) / 0.2f;
+				TargetVel = DashTargetVelocity * DecelAlpha;
+			}
+			
+			// Smoothly interpolate horizontal velocity toward target (like hook does)
+			FVector NewVelocity = FMath::VInterpTo(
+				FVector(CurrentVelocity.X, CurrentVelocity.Y, 0.f),
+				TargetVel,
+				DeltaTime,
+				10.f // Interp speed (higher = snappier, lower = smoother)
+			);
+			
+			// Preserve vertical velocity (gravity/jumping)
+			NewVelocity.Z = CurrentVelocity.Z;
+			Movement->Velocity = NewVelocity;
 		}
 
 		// Decrease remaining time
