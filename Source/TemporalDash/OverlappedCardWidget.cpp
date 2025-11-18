@@ -1,5 +1,3 @@
-// OverlappedCardWidget.cpp
-
 #include "OverlappedCardWidget.h"
 #include "Components/CanvasPanelSlot.h"
 #include <Kismet/KismetSystemLibrary.h>
@@ -41,7 +39,6 @@ void UOverlappedCardWidget::InsertCard(int32 Index, UObject* CardDataObject)
     CardData.Insert(CardDataObject, Index);
     TargetPositions.Insert(0.f, Index);
 
-    // Let Blueprint fill visuals (icon, texture, etc.)
     OnCardCreated(NewCard, CardDataObject);
 
     UpdateLayoutTargets();
@@ -87,20 +84,58 @@ void UOverlappedCardWidget::UpdateLayoutTargets()
     const int32 N = CardWidgets.Num();
     TargetPositions.SetNum(N);
 
-    for (int32 i = 0; i < N; ++i)
+    if (N == 0 || !CardContainer)
+        return;
+
+    // Canvas (container) width
+    float ContainerWidth = 0.f;
+    if (UCanvasPanelSlot* ContainerSlot = Cast<UCanvasPanelSlot>(CardContainer->Slot))
     {
-        if (HighlightIndex == INDEX_NONE)
+        ContainerWidth = ContainerSlot->GetSize().X;
+    }
+
+    // Fallback if container has no size
+    if (ContainerWidth <= 0.f)
+    {
+        ContainerWidth = 1920.f; // default for testing
+    }
+
+    // Effective overlap range control
+    const float MinOverlapRatio = 0.80f; // 80% overlap minimum
+    const float MaxOverlapRatio = 1.00f; // 100% (no gap)
+    const float HighlightOverlapRatio = 0.10f; // 10% overlap (less covered)
+
+    const float HighlightOverlapPixels = CardWidth * HighlightOverlapRatio;
+
+    // Compute ideal overlap based on container width
+    // Total visual width (from leftmost to rightmost edge) should fit container
+    // TotalWidth = CardWidth + (N-2)*(CardWidth - OverlapNormal) + (CardWidth - HighlightOverlap)
+    float IdealWidthNoOverlap = (N <= 1) ? CardWidth : CardWidth + (N - 2) * (CardWidth)+(CardWidth - HighlightOverlapPixels);
+
+    float OverlapNormal = CardWidth; // start with fully overlapped (100%)
+    if (N > 1)
+    {
+        float AvailableWidth = ContainerWidth;
+        // Try to fit deck into container
+        float RequiredOverlap = CardWidth - (AvailableWidth - (CardWidth - HighlightOverlapPixels) - CardWidth) / (float)(N - 2);
+        OverlapNormal = FMath::Clamp(RequiredOverlap, CardWidth * MinOverlapRatio, CardWidth * MaxOverlapRatio);
+    }
+
+    // Compute left positions from right edge
+    float RightEdge = ContainerWidth;
+    float CurrentX = RightEdge - CardWidth; // rightmost card start
+
+    for (int32 i = N - 1; i >= 0; --i)
+    {
+        TargetPositions[i] = CurrentX;
+
+        if (i == HighlightIndex)
         {
-            TargetPositions[i] = i * (CardWidth - Overlap);
-        }
-        else if (i <= HighlightIndex)
-        {
-            TargetPositions[i] = i * (CardWidth - Overlap);
+            CurrentX -= (CardWidth - HighlightOverlapPixels);
         }
         else
         {
-            float HighlightOffset = (CardWidth - HighlightOverlap) - (CardWidth - Overlap);
-            TargetPositions[i] = i * (CardWidth - Overlap) + HighlightOffset;
+            CurrentX -= (CardWidth - OverlapNormal);
         }
     }
 }
@@ -127,7 +162,6 @@ void UOverlappedCardWidget::NativeTick(const FGeometry& MyGeometry, float InDelt
         NewPos.Y = CurrentPos.Y;
 
         CanvasSlot->SetPosition(NewPos);
-
         CanvasSlot->SetZOrder(i);
     }
 }
