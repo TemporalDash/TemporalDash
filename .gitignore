@@ -13,4 +13,5 @@ Saved
 *.xcodeproj
 *.xcworkspace
 .vsconfig
+.idea
 UpgradeLog.htm
