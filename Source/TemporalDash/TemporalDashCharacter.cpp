@@ -107,6 +107,9 @@ void ATemporalDashCharacter::DoAim(float Yaw, float Pitch)
 
 void ATemporalDashCharacter::DoMove(float Right, float Forward)
 {
+	// Cache input for Hook steering
+	LastMovementInput = FVector(Right, Forward, 0.0f);
+
 	if (GetController())
 	{
 		// pass the move inputs
