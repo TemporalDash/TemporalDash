@@ -109,25 +109,20 @@ void UOverlappedCardWidget::UpdateLayoutTargets()
 
     // Compute ideal overlap based on container width
     // Total visual width (from leftmost to rightmost edge) should fit container
-    // TotalWidth = CardWidth + (N-2)*(CardWidth - OverlapNormal) + (CardWidth - HighlightOverlap)
-    float IdealWidthNoOverlap = (N <= 1) ? CardWidth : CardWidth + (N - 2) * (CardWidth)+(CardWidth - HighlightOverlapPixels);
 
     float OverlapNormal = CardWidth; // start with fully overlapped (100%)
     if (N > 1)
     {
-        float AvailableWidth = ContainerWidth;
+        float AvailableWidth = ContainerWidth - HighlightOverlapPixels;
         // Try to fit deck into container
-        float RequiredOverlap = CardWidth - (AvailableWidth - (CardWidth - HighlightOverlapPixels) - CardWidth) / (float)(N - 2);
+        float RequiredOverlap = CardWidth - (AvailableWidth - (CardWidth - HighlightOverlapPixels) - CardWidth) / (float)(N - 1);
         OverlapNormal = FMath::Clamp(RequiredOverlap, CardWidth * MinOverlapRatio, CardWidth * MaxOverlapRatio);
     }
 
-    // Compute left positions from right edge
-    float RightEdge = ContainerWidth;
-    float CurrentX = RightEdge - CardWidth; // rightmost card start
+    float CurrentX = ContainerWidth; // - CardWidth; // rightmost card start
 
     for (int32 i = N - 1; i >= 0; --i)
     {
-        TargetPositions[i] = CurrentX;
 
         if (i == HighlightIndex)
         {
@@ -137,6 +132,7 @@ void UOverlappedCardWidget::UpdateLayoutTargets()
         {
             CurrentX -= (CardWidth - OverlapNormal);
         }
+        TargetPositions[i] = CurrentX;
     }
 }
 
