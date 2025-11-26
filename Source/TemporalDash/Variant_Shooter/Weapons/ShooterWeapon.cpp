@@ -219,7 +219,8 @@ void AShooterWeapon::Fire()
 	TimeOfLastShot = GetWorld()->GetTimeSeconds();
 
 	// make noise so the AI perception system can hear us
-	MakeNoise(ShotLoudness, PawnOwner.Get(), PawnOwner.IsValid() ? PawnOwner->GetActorLocation() : GetActorLocation(), ShotNoiseRange, ShotNoiseTag);
+	APawn* RawPawnOwner = PawnOwner.Get();
+	MakeNoise(ShotLoudness, RawPawnOwner, RawPawnOwner ? RawPawnOwner->GetActorLocation() : GetActorLocation(), ShotNoiseRange, ShotNoiseTag);
 
 	// are we full auto?
 	if (bFullAuto && bIsFiring)

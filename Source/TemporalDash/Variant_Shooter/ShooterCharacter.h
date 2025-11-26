@@ -14,6 +14,7 @@ class UPawnNoiseEmitterComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FBulletCountUpdatedDelegate, int32, MagazineSize, int32, Bullets);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDamagedDelegate, float, LifePercent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWeaponDiscardedDelegate, int32, WeaponIndex);
 
 /**
  *  A player controllable first person shooter character
@@ -90,6 +91,9 @@ public:
 	/** Damaged delegate */
 	FDamagedDelegate OnDamaged;
 
+	/** Weapon discarded delegate */
+	FWeaponDiscardedDelegate OnWeaponDiscarded;
+
 public:
 
 	/** Constructor */
@@ -124,6 +128,14 @@ public:
 	/** Handles switch weapon input */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	void DoSwitchWeapon();
+
+	/** Get the list of owned weapons (for UI/Blueprint) */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Shooter|Weapons")
+	const TArray<AShooterWeapon*>& GetOwnedWeapons() const { return OwnedWeapons; }
+
+	/** Get the number of owned weapons */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Shooter|Weapons")
+	int32 GetOwnedWeaponCount() const { return OwnedWeapons.Num(); }
 
 public:
 

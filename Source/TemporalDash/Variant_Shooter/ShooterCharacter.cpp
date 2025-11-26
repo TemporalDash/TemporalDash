@@ -229,8 +229,13 @@ void AShooterCharacter::DiscardWeapon(AShooterWeapon* Weapon)
 	int32 RemovedIndex = OwnedWeapons.Find(Weapon);
 	if (RemovedIndex == INDEX_NONE)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("DiscardWeapon: Weapon not found in inventory!"));
 		return; // weapon not in inventory
 	}
+
+	// broadcast weapon discarded event (for UI/card removal)
+	UE_LOG(LogTemp, Warning, TEXT("DiscardWeapon: Broadcasting OnWeaponDiscarded for index %d"), RemovedIndex);
+	OnWeaponDiscarded.Broadcast(RemovedIndex);
 
 	// deactivate if currently equipped
 	bool bWasCurrent = (Weapon == CurrentWeapon);
