@@ -14,7 +14,7 @@
 
 AShooterWeapon::AShooterWeapon()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false; // weapon does not need ticking
 
 	// create the root
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
@@ -34,6 +34,9 @@ AShooterWeapon::AShooterWeapon()
 	ThirdPersonMesh->SetCollisionProfileName(FName("NoCollision"));
 	ThirdPersonMesh->SetFirstPersonPrimitiveType(EFirstPersonPrimitiveType::WorldSpaceRepresentation);
 	ThirdPersonMesh->bOwnerNoSee = true;
+	
+	// initialize magazines (MaxMagazines set in BP; RemainingMagazines excludes the one currently loaded)
+	RemainingMagazines = FMath::Max(0, MaxMagazines - 1);
 }
 
 void AShooterWeapon::BeginPlay()
@@ -47,8 +50,9 @@ void AShooterWeapon::BeginPlay()
 	WeaponOwner = Cast<IShooterWeaponHolder>(GetOwner());
 	PawnOwner = Cast<APawn>(GetOwner());
 
-	// fill the first ammo clip
+	// initialize ammo
 	CurrentBullets = MagazineSize;
+	// RemainingMagazines already set in constructor
 
 	// attach the meshes to the owner
 	WeaponOwner->AttachWeaponMeshes(this);
@@ -91,6 +95,11 @@ void AShooterWeapon::DeactivateWeapon()
 
 void AShooterWeapon::StartFiring()
 {
+	if (IsEmpty())
+	{
+		// Play a dry-fire sound if needed
+		return;
+	}
 	// raise the firing flag
 	bIsFiring = true;
 
@@ -119,8 +128,11 @@ void AShooterWeapon::StopFiring()
 	// lower the firing flag
 	bIsFiring = false;
 
-	// clear the refire timer
-	GetWorld()->GetTimerManager().ClearTimer(RefireTimer);
+	// clear the refire timer (check for valid world during destruction)
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(RefireTimer);
+	}
 }
 
 void AShooterWeapon::Fire()
@@ -131,25 +143,94 @@ void AShooterWeapon::Fire()
 		return;
 	}
 	
+	// guard: ensure we have bullets
+	if (CurrentBullets <= 0)
+	{
+		if (RemainingMagazines > 0)
+		{
+			--RemainingMagazines;
+			CurrentBullets = MagazineSize;
+		}
+		else
+		{
+			bIsFiring = false;
+			StopFiring();
+			if (PawnOwner.IsValid() && PawnOwner->IsPlayerControlled())
+			{
+				TWeakObjectPtr<AActor> WeakOwner = GetOwner();
+				GetWorld()->GetTimerManager().SetTimerForNextTick([this, WeakOwner]()
+				{
+					if (IsValid(this) && WeakOwner.IsValid())
+					{
+						if (IShooterWeaponHolder* Holder = Cast<IShooterWeaponHolder>(WeakOwner.Get()))
+						{
+							Holder->DiscardWeapon(this);
+						}
+					}
+				});
+			}
+			else
+			{
+				CurrentBullets = MagazineSize;
+			}
+			return;
+		}
+	}
+	
 	// fire a projectile at the target
 	FireProjectile(WeaponOwner->GetWeaponTargetLocation());
+
+	// consume a bullet
+	--CurrentBullets;
+
+	// update the weapon HUD (optional per-shot)
+	if (WeaponOwner && ShouldUpdateHUDPerShot())
+	{
+		WeaponOwner->UpdateWeaponHUD(CurrentBullets, MagazineSize);
+	}
+
+	// if we just consumed the last bullet and have no spare magazines, handle empty
+	if (CurrentBullets <= 0 && RemainingMagazines <= 0)
+	{
+		bIsFiring = false;
+		StopFiring();
+		if (PawnOwner.IsValid() && PawnOwner->IsPlayerControlled())
+		{
+			TWeakObjectPtr<AActor> WeakOwner = GetOwner();
+			GetWorld()->GetTimerManager().SetTimerForNextTick([this, WeakOwner]()
+			{
+				if (IsValid(this) && WeakOwner.IsValid())
+				{
+					if (IShooterWeaponHolder* Holder = Cast<IShooterWeaponHolder>(WeakOwner.Get()))
+					{
+						Holder->DiscardWeapon(this);
+					}
+				}
+			});
+		}
+		else
+		{
+			CurrentBullets = MagazineSize;
+		}
+		return;
+	}
 
 	// update the time of our last shot
 	TimeOfLastShot = GetWorld()->GetTimeSeconds();
 
 	// make noise so the AI perception system can hear us
-	MakeNoise(ShotLoudness, PawnOwner, PawnOwner->GetActorLocation(), ShotNoiseRange, ShotNoiseTag);
+	MakeNoise(ShotLoudness, PawnOwner.Get(), PawnOwner.IsValid() ? PawnOwner->GetActorLocation() : GetActorLocation(), ShotNoiseRange, ShotNoiseTag);
 
 	// are we full auto?
-	if (bFullAuto)
+	if (bFullAuto && bIsFiring)
 	{
 		// schedule the next shot
 		GetWorld()->GetTimerManager().SetTimer(RefireTimer, this, &AShooterWeapon::Fire, RefireRate, false);
-	} else {
-
+	}
+	else if (bIsFiring)
+	{
 		// for semi-auto weapons, schedule the cooldown notification
 		GetWorld()->GetTimerManager().SetTimer(RefireTimer, this, &AShooterWeapon::FireCooldownExpired, RefireRate, false);
-
 	}
 }
 
@@ -161,35 +242,23 @@ void AShooterWeapon::FireCooldownExpired()
 
 void AShooterWeapon::FireProjectile(const FVector& TargetLocation)
 {
-	// get the projectile transform
-	FTransform ProjectileTransform = CalculateProjectileSpawnTransform(TargetLocation);
-	
-	// spawn the projectile
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	SpawnParams.TransformScaleMethod = ESpawnActorScaleMethod::OverrideRootScale;
-	SpawnParams.Owner = GetOwner();
-	SpawnParams.Instigator = PawnOwner;
+    // get the projectile transform
+    FTransform ProjectileTransform = CalculateProjectileSpawnTransform(TargetLocation);
+    
+    // spawn the projectile
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    SpawnParams.TransformScaleMethod = ESpawnActorScaleMethod::OverrideRootScale;
+    SpawnParams.Owner = GetOwner();
+    SpawnParams.Instigator = PawnOwner.Get();
 
-	AShooterProjectile* Projectile = GetWorld()->SpawnActor<AShooterProjectile>(ProjectileClass, ProjectileTransform, SpawnParams);
+    AShooterProjectile* Projectile = GetWorld()->SpawnActor<AShooterProjectile>(ProjectileClass, ProjectileTransform, SpawnParams);
 
-	// play the firing montage
-	WeaponOwner->PlayFiringMontage(FiringMontage);
+    // play the firing montage
+    WeaponOwner->PlayFiringMontage(FiringMontage);
 
-	// add recoil
-	WeaponOwner->AddWeaponRecoil(FiringRecoil);
-
-	// consume bullets
-	--CurrentBullets;
-
-	// if the clip is depleted, reload it
-	if (CurrentBullets <= 0)
-	{
-		CurrentBullets = MagazineSize;
-	}
-
-	// update the weapon HUD
-	WeaponOwner->UpdateWeaponHUD(CurrentBullets, MagazineSize);
+    // add recoil
+    WeaponOwner->AddWeaponRecoil(FiringRecoil);
 }
 
 FTransform AShooterWeapon::CalculateProjectileSpawnTransform(const FVector& TargetLocation) const
@@ -215,4 +284,19 @@ const TSubclassOf<UAnimInstance>& AShooterWeapon::GetFirstPersonAnimInstanceClas
 const TSubclassOf<UAnimInstance>& AShooterWeapon::GetThirdPersonAnimInstanceClass() const
 {
 	return ThirdPersonAnimInstanceClass;
+}
+
+void AShooterWeapon::HandleEmpty()
+{
+	if (IsEmpty())
+	{
+		StopFiring();
+		if (PawnOwner.IsValid() && PawnOwner->IsPlayerControlled())
+		{
+			if (IShooterWeaponHolder* Holder = Cast<IShooterWeaponHolder>(GetOwner()))
+			{
+				Holder->DiscardWeapon(this);
+			}
+		}
+	}
 }

@@ -68,6 +68,15 @@ protected:
 	/** Weapon currently equipped and ready to shoot with */
 	TObjectPtr<AShooterWeapon> CurrentWeapon;
 
+	/** Index of the currently equipped weapon in OwnedWeapons (INDEX_NONE if none) */
+	int32 CurrentWeaponIndex = INDEX_NONE;
+
+	/** Default first person AnimInstance class to restore when no weapon is equipped */
+	TSubclassOf<UAnimInstance> DefaultFirstPersonAnimClass;
+
+	/** Default third person AnimInstance class to restore when no weapon is equipped */
+	TSubclassOf<UAnimInstance> DefaultThirdPersonAnimClass;
+
 	UPROPERTY(EditAnywhere, Category ="Destruction", meta = (ClampMin = 0, ClampMax = 10, Units = "s"))
 	float RespawnTime = 5.0f;
 
@@ -147,12 +156,18 @@ public:
 	/** Notifies the owner that the weapon cooldown has expired and it's ready to shoot again */
 	virtual void OnSemiWeaponRefire() override;
 
+	/** Called when a weapon runs out of ammo and should be discarded */
+	virtual void DiscardWeapon(AShooterWeapon* Weapon) override;
+
 	//~End IShooterWeaponHolder interface
 
 protected:
 
 	/** Returns true if the character already owns a weapon of the given class */
 	AShooterWeapon* FindWeaponOfType(TSubclassOf<AShooterWeapon> WeaponClass) const;
+
+	/** Equip a weapon by index in OwnedWeapons (safely deactivating previous) */
+	void EquipWeaponByIndex(int32 NewIndex);
 
 	/** Called when this character's HP is depleted */
 	void Die();

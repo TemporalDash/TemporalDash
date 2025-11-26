@@ -31,6 +31,10 @@ void AShooterCharacter::BeginPlay()
 
 	// update the HUD
 	OnDamaged.Broadcast(1.0f);
+
+	// store default AnimInstance classes for when we have no weapon
+	DefaultFirstPersonAnimClass = GetFirstPersonMesh()->GetAnimInstance() ? GetFirstPersonMesh()->GetAnimInstance()->GetClass() : nullptr;
+	DefaultThirdPersonAnimClass = GetMesh()->GetAnimInstance() ? GetMesh()->GetAnimInstance()->GetClass() : nullptr;
 }
 
 void AShooterCharacter::EndPlay(EEndPlayReason::Type EndPlayReason)
@@ -85,7 +89,7 @@ float AShooterCharacter::TakeDamage(float Damage, struct FDamageEvent const& Dam
 void AShooterCharacter::DoStartFiring()
 {
 	// fire the current weapon
-	if (CurrentWeapon)
+	if (IsValid(CurrentWeapon))
 	{
 		CurrentWeapon->StartFiring();
 	}
@@ -94,7 +98,7 @@ void AShooterCharacter::DoStartFiring()
 void AShooterCharacter::DoStopFiring()
 {
 	// stop firing the current weapon
-	if (CurrentWeapon)
+	if (IsValid(CurrentWeapon))
 	{
 		CurrentWeapon->StopFiring();
 	}
@@ -105,28 +109,18 @@ void AShooterCharacter::DoSwitchWeapon()
 	// ensure we have at least two weapons two switch between
 	if (OwnedWeapons.Num() > 1)
 	{
-		// deactivate the old weapon
-		CurrentWeapon->DeactivateWeapon();
-
-		// find the index of the current weapon in the owned list
-		int32 WeaponIndex = OwnedWeapons.Find(CurrentWeapon);
-
-		// is this the last weapon?
-		if (WeaponIndex == OwnedWeapons.Num() - 1)
+		// if we don't currently have a weapon index, initialize to first
+		if (CurrentWeaponIndex == INDEX_NONE)
 		{
-			// loop back to the beginning of the array
-			WeaponIndex = 0;
-		}
-		else {
-			// select the next weapon index
-			++WeaponIndex;
+			EquipWeaponByIndex(0);
+			return;
 		}
 
-		// set the new weapon as current
-		CurrentWeapon = OwnedWeapons[WeaponIndex];
-
-		// activate the new weapon
-		CurrentWeapon->ActivateWeapon();
+		int32 NextIndex = (CurrentWeaponIndex + 1) % OwnedWeapons.Num();
+		if (NextIndex != CurrentWeaponIndex)
+		{
+			EquipWeaponByIndex(NextIndex);
+		}
 	}
 }
 
@@ -197,15 +191,8 @@ void AShooterCharacter::AddWeaponClass(const TSubclassOf<AShooterWeapon>& Weapon
 			// add the weapon to the owned list
 			OwnedWeapons.Add(AddedWeapon);
 
-			// if we have an existing weapon, deactivate it
-			if (CurrentWeapon)
-			{
-				CurrentWeapon->DeactivateWeapon();
-			}
-
-			// switch to the new weapon
-			CurrentWeapon = AddedWeapon;
-			CurrentWeapon->ActivateWeapon();
+			// equip newly added weapon by index (last element)
+			EquipWeaponByIndex(OwnedWeapons.Num() - 1);
 		}
 	}
 }
@@ -228,6 +215,75 @@ void AShooterCharacter::OnWeaponDeactivated(AShooterWeapon* Weapon)
 void AShooterCharacter::OnSemiWeaponRefire()
 {
 	// unused
+}
+
+void AShooterCharacter::DiscardWeapon(AShooterWeapon* Weapon)
+{
+	// validate weapon pointer
+	if (!IsValid(Weapon))
+	{
+		return;
+	}
+
+	// find index before removal
+	int32 RemovedIndex = OwnedWeapons.Find(Weapon);
+	if (RemovedIndex == INDEX_NONE)
+	{
+		return; // weapon not in inventory
+	}
+
+	// deactivate if currently equipped
+	bool bWasCurrent = (Weapon == CurrentWeapon);
+	if (bWasCurrent && IsValid(CurrentWeapon))
+	{
+		CurrentWeapon->DeactivateWeapon();
+	}
+
+	OwnedWeapons.RemoveAt(RemovedIndex);
+
+	// adjust current weapon selection
+	if (bWasCurrent)
+	{
+		if (OwnedWeapons.Num() == 0)
+		{
+			CurrentWeapon = nullptr;
+			CurrentWeaponIndex = INDEX_NONE;
+
+			// restore default AnimInstance classes for the hand meshes
+			if (DefaultFirstPersonAnimClass)
+			{
+				GetFirstPersonMesh()->SetAnimInstanceClass(DefaultFirstPersonAnimClass);
+			}
+			if (DefaultThirdPersonAnimClass)
+			{
+				GetMesh()->SetAnimInstanceClass(DefaultThirdPersonAnimClass);
+			}
+
+			// reset the bullet counter UI
+			OnBulletCountUpdated.Broadcast(0, 0);
+		}
+		else
+		{
+			// prefer same slot index (now points at next weapon) or clamp
+			int32 NewIndex = RemovedIndex;
+			if (!OwnedWeapons.IsValidIndex(NewIndex))
+			{
+				NewIndex = OwnedWeapons.Num() - 1; // removed last, fallback to new last
+			}
+			EquipWeaponByIndex(NewIndex);
+		}
+	}
+	else
+	{
+		// if not current and index before current, shift CurrentWeaponIndex left
+		if (RemovedIndex < CurrentWeaponIndex)
+		{
+			--CurrentWeaponIndex;
+		}
+	}
+
+	// destroy the weapon actor last
+	Weapon->Destroy();
 }
 
 AShooterWeapon* AShooterCharacter::FindWeaponOfType(TSubclassOf<AShooterWeapon> WeaponClass) const
@@ -280,4 +336,35 @@ void AShooterCharacter::OnRespawn()
 {
 	// destroy the character to force the PC to respawn
 	Destroy();
+}
+
+void AShooterCharacter::EquipWeaponByIndex(int32 NewIndex)
+{
+	if (!OwnedWeapons.IsValidIndex(NewIndex))
+	{
+		CurrentWeapon = nullptr;
+		CurrentWeaponIndex = INDEX_NONE;
+		return;
+	}
+
+	AShooterWeapon* NewWeapon = OwnedWeapons[NewIndex];
+	if (NewWeapon == CurrentWeapon)
+	{
+		// already equipped
+		return;
+	}
+
+	// deactivate previous
+	if (IsValid(CurrentWeapon))
+	{
+		CurrentWeapon->DeactivateWeapon();
+	}
+
+	CurrentWeapon = NewWeapon;
+	CurrentWeaponIndex = NewIndex;
+
+	if (IsValid(CurrentWeapon))
+	{
+		CurrentWeapon->ActivateWeapon();
+	}
 }
