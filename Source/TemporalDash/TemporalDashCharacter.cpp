@@ -50,6 +50,14 @@ ATemporalDashCharacter::ATemporalDashCharacter()
 	MaxJumpCount = 2;
 	JumpCount = 0;
 	SecondJumpStrength = 600.0f; // tweak to taste
+
+	// Setup Camera roll for wall slide
+	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
+	FirstPersonCamera->SetupAttachment(GetCapsuleComponent());
+	// IMPORTANT: 
+	// The Camera must follow the controller for Pitch/Yaw...
+	FirstPersonCamera->bUsePawnControlRotation = true;
+	// ...BUT we will offset the Roll manually, so standard Controller Roll must be zero.
 }
 
 void ATemporalDashCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -124,6 +132,43 @@ void ATemporalDashCharacter::DoJumpStart()
 	if (GetCharacterMovement()->IsMovingOnGround())
 	{
 		Jump();
+		JumpCount = 1;
+	}
+	else if (bIsWallSliding)
+	{
+		// 1. Unset Z component (Kill vertical momentum before launching)
+		// We modify the movement component directly to ensure the physics engine knows Z is zeroed.
+		FVector CurrentVel = GetCharacterMovement()->Velocity;
+		CurrentVel.Z = 0.0f;
+		GetCharacterMovement()->Velocity = CurrentVel;
+
+		// 2. Calculate Launch Direction
+		// A: Push AWAY from the wall (Critical to stop re-grabbing the wall instantly)
+		FVector WallPush = CurrentWallNormal * SecondJumpStrength * 2 * sin(abs(TargetWallRunRoll));
+
+		// B: Push UP (The jump height)
+		// Note: If your camera is tilted, "Up" is technically diagonal, but FVector::UpVector 
+		// is safer to ensure consistent jump height regardless of look angle.
+		FVector UpPush = FVector::UpVector * SecondJumpStrength;
+
+		// C: Push FORWARD (To keep flow)
+		//FVector ForwardPush = GetActorForwardVector() * 400.f;
+
+		// Combine them
+		FVector LaunchDirection = WallPush + UpPush; // +ForwardPush;
+
+		// 3. Stop Sliding State
+		// We must call this BEFORE LaunchCharacter to reset MovementMode to MOVE_Falling
+		// and stop the 'Tick' logic from forcing us back into the wall.
+		StopWallSliding();
+
+		// 4. Launch the Character
+		// bXYOverride = false: Adds to existing horizontal momentum (feels fluid)
+		// bZOverride = true: Sets exact vertical velocity (feels crisp)
+		LaunchCharacter(LaunchDirection, false, true);
+
+		// 5. Handle Jump Counts
+		// Set to 1 so the system knows we have used a jump (allows for double jump if you have it)
 		JumpCount = 1;
 	}
 	else

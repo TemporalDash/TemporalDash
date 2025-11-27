@@ -5,11 +5,48 @@
 #include "SlideableWallComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
+#include "InputAction.h"
+
+void ATemporalDashCharacter::Look(const FInputActionValue& Value)
+{
+    // 1. Get Raw Mouse Input (X = Yaw, Y = Pitch)
+    FVector2D LookAxisVector = Value.Get<FVector2D>();
+
+    if (Controller != nullptr)
+    {
+        // 2. THE FIX: Counter-Rotate the input by the current Roll.
+        // If the screen is rolled 15 degrees, we rotate the input -15 degrees.
+        // This realigns "Mouse Up" to "Screen Up" instead of "World Up".
+
+        FVector2D RotatedInput = LookAxisVector;
+
+        if (FMath::Abs(CurrentWallRunRoll) > 0.1f)
+        {
+            // Convert degrees to radians
+            float RollRad = FMath::DegreesToRadians(CurrentWallRunRoll);
+
+            // Standard 2D Rotation Matrix
+            // NewX = X * cos(a) - Y * sin(a)
+            // NewY = X * sin(a) + Y * cos(a)
+
+            // Note: We might need to invert the angle depending on mouse setup,
+            // generally rotating the INPUT opposite to the CAMERA corrects it.
+            float CosA = FMath::Cos(-RollRad);
+            float SinA = FMath::Sin(-RollRad);
+
+            RotatedInput.X = LookAxisVector.X * CosA - LookAxisVector.Y * SinA;
+            RotatedInput.Y = LookAxisVector.X * SinA + LookAxisVector.Y * CosA;
+        }
+
+        // 3. Apply the Rotated Input
+        AddControllerYawInput(RotatedInput.X);
+        AddControllerPitchInput(RotatedInput.Y);
+    }
+}
 
 void ATemporalDashCharacter::StartWallSliding(const USlideableWallComponent* Wall)
 {
     if (!Wall) return;
-    GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("StartWallSliding Called!"));
     // 1. State Setup
     bIsWallSliding = true;
     CurrentWallNormal = Wall->GetInteractionNormal();
@@ -25,7 +62,6 @@ void ATemporalDashCharacter::StartWallSliding(const USlideableWallComponent* Wal
 
 void ATemporalDashCharacter::StopWallSliding()
 {
-    GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("StopWallSliding Called!"));
     if (bIsWallSliding)
     {
         bIsWallSliding = false;
@@ -90,23 +126,5 @@ void ATemporalDashCharacter::UpdateWallSliding(float DeltaTime)
 
     // If DotResult is positive, wall is on Left -> Roll Right (+Roll)
     // If DotResult is negative, wall is on Right -> Roll Left (-Roll)
-    float TargetRoll = (DotResult > 0) ? -WallRunCameraRoll : WallRunCameraRoll;
-
-    SetCameraRoll(TargetRoll);
-}
-
-void ATemporalDashCharacter::SetCameraRoll(float TargetRoll)
-{
-    AController* MyController = GetController();
-    if (MyController)
-    {
-        FRotator ControlRot = MyController->GetControlRotation();
-
-        // Smoothly interpolate the Roll
-        // Note: ControlRotation usually doesn't use Roll, so this is a visual effect
-        float NewRoll = FMath::FInterpTo(ControlRot.Roll, TargetRoll, GetWorld()->GetDeltaSeconds(), 10.f);
-
-        ControlRot.Roll = NewRoll;
-        MyController->SetControlRotation(ControlRot);
-    }
+    TargetWallRunRoll = (DotResult > 0) ? -WallRunCameraRoll : WallRunCameraRoll;
 }

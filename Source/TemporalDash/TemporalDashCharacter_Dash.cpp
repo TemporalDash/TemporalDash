@@ -220,6 +220,16 @@ void ATemporalDashCharacter::Tick(float DeltaTime)
 	else
 	{
 		// Smoothly reset camera roll when not on wall
-		SetCameraRoll(0.0f);
+		TargetWallRunRoll = 0.f;
+	}
+
+	// update camera tilt for wall sliding
+	CurrentWallRunRoll = FMath::FInterpTo(CurrentWallRunRoll, TargetWallRunRoll, DeltaTime, RollInterpSpeed);
+	AController* PC = GetController();
+	if (PC)
+	{
+		FRotator ControlRot = PC->GetControlRotation();
+		ControlRot.Roll = CurrentWallRunRoll;
+		PC->SetControlRotation(ControlRot);
 	}
 }

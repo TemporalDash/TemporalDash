@@ -77,6 +77,20 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
 	float WallRunCameraRoll = 15.0f;
 
+	// --- Wall Run camera Variables ---
+	float CurrentWallRunRoll = 0.0f;
+	float TargetWallRunRoll = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement|WallRun")
+	float MaxWallRunRoll = 15.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement|WallRun")
+	float RollInterpSpeed = 10.0f;
+
+	// --- Components ---
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	class UCameraComponent* FirstPersonCamera;
+
 public:
 	ATemporalDashCharacter();
 
@@ -209,7 +223,7 @@ protected:
 
 	void UpdateWallSliding(float DeltaTime);
 
-	void SetCameraRoll(float TargetRoll);
+	void Look(const FInputActionValue& Value);
 
 public:
 
