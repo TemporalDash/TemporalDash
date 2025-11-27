@@ -211,4 +211,15 @@ void ATemporalDashCharacter::Tick(float DeltaTime)
 	{
 		UpdateHookMovement(DeltaTime);
 	}
+
+	// update wall sliding
+	if (bIsWallSliding)
+	{
+		UpdateWallSliding(DeltaTime);
+	}
+	else
+	{
+		// Smoothly reset camera roll when not on wall
+		SetCameraRoll(0.0f);
+	}
 }

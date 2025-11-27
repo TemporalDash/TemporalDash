@@ -12,6 +12,7 @@ class USkeletalMeshComponent;
 class UCameraComponent;
 class UInputAction;
 struct FInputActionValue;
+class USlideableWallComponent;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -56,6 +57,25 @@ protected:
 	/** Hook Input Action */
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* Hook;
+
+	/** Whether the character is sliding on wall*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	bool bIsWallSliding = false;
+
+	// Store the wall normal to perform calculations in Tick
+	FVector CurrentWallNormal;
+
+	// Configurable speed for wall running
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float WallRunSpeed = 800.f;
+
+	// How fast the character slides down the wall (0 = infinite run, >0 = slide down)
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float WallGravity = 200.f;
+
+	// How much to tilt the camera (Roll)
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float WallRunCameraRoll = 15.0f;
 
 public:
 	ATemporalDashCharacter();
@@ -187,6 +207,10 @@ protected:
 	virtual void Landed(const FHitResult& Hit) override;
 	
 
+	void UpdateWallSliding(float DeltaTime);
+
+	void SetCameraRoll(float TargetRoll);
+
 public:
 
 	/** Returns the first person mesh **/
@@ -194,6 +218,13 @@ public:
 
 	/** Returns first person camera component **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+
+	/** Blueprint interface for sliding start and stop */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void StartWallSliding(const USlideableWallComponent* Wall);
+
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void StopWallSliding();
 
 };
 
