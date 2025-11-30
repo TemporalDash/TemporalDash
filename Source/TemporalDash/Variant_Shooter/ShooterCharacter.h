@@ -14,6 +14,7 @@ class UPawnNoiseEmitterComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FBulletCountUpdatedDelegate, int32, MagazineSize, int32, Bullets);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDamagedDelegate, float, LifePercent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWeaponDiscardedDelegate, int32, WeaponIndex);
 
 /**
  *  A player controllable first person shooter character
@@ -68,6 +69,15 @@ protected:
 	/** Weapon currently equipped and ready to shoot with */
 	TObjectPtr<AShooterWeapon> CurrentWeapon;
 
+	/** Index of the currently equipped weapon in OwnedWeapons (INDEX_NONE if none) */
+	int32 CurrentWeaponIndex = INDEX_NONE;
+
+	/** Default first person AnimInstance class to restore when no weapon is equipped */
+	TSubclassOf<UAnimInstance> DefaultFirstPersonAnimClass;
+
+	/** Default third person AnimInstance class to restore when no weapon is equipped */
+	TSubclassOf<UAnimInstance> DefaultThirdPersonAnimClass;
+
 	UPROPERTY(EditAnywhere, Category ="Destruction", meta = (ClampMin = 0, ClampMax = 10, Units = "s"))
 	float RespawnTime = 5.0f;
 
@@ -80,6 +90,9 @@ public:
 
 	/** Damaged delegate */
 	FDamagedDelegate OnDamaged;
+
+	/** Weapon discarded delegate */
+	FWeaponDiscardedDelegate OnWeaponDiscarded;
 
 public:
 
@@ -116,6 +129,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	void DoSwitchWeapon();
 
+	/** Get the list of owned weapons (for UI/Blueprint) */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Shooter|Weapons")
+	const TArray<AShooterWeapon*>& GetOwnedWeapons() const { return OwnedWeapons; }
+
+	/** Get the number of owned weapons */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Shooter|Weapons")
+	int32 GetOwnedWeaponCount() const { return OwnedWeapons.Num(); }
+
 public:
 
 	//~Begin IShooterWeaponHolder interface
@@ -147,12 +168,18 @@ public:
 	/** Notifies the owner that the weapon cooldown has expired and it's ready to shoot again */
 	virtual void OnSemiWeaponRefire() override;
 
+	/** Called when a weapon runs out of ammo and should be discarded */
+	virtual void DiscardWeapon(AShooterWeapon* Weapon) override;
+
 	//~End IShooterWeaponHolder interface
 
 protected:
 
 	/** Returns true if the character already owns a weapon of the given class */
 	AShooterWeapon* FindWeaponOfType(TSubclassOf<AShooterWeapon> WeaponClass) const;
+
+	/** Equip a weapon by index in OwnedWeapons (safely deactivating previous) */
+	void EquipWeaponByIndex(int32 NewIndex);
 
 	/** Called when this character's HP is depleted */
 	void Die();
