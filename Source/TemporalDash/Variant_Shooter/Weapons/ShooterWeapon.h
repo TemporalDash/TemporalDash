@@ -144,10 +144,10 @@ protected:
 public:
 
 	/** Activates this weapon and gets it ready to fire */
-	void ActivateWeapon();
+	virtual void ActivateWeapon();
 
 	/** Deactivates this weapon */
-	void DeactivateWeapon();
+	virtual void DeactivateWeapon();
 
 	/** Start firing this weapon */
 	void StartFiring();
