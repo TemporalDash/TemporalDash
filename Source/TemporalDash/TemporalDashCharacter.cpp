@@ -12,6 +12,9 @@
 
 ATemporalDashCharacter::ATemporalDashCharacter()
 {
+	// Enable Tick for dash linear decay
+	PrimaryActorTick.bCanEverTick = true;
+
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
 	
@@ -42,6 +45,11 @@ ATemporalDashCharacter::ATemporalDashCharacter()
 	// Configure character movement
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 	GetCharacterMovement()->AirControl = 0.5f;
+
+	// Double-jump defaults
+	MaxJumpCount = 2;
+	JumpCount = 0;
+	SecondJumpStrength = 600.0f; // tweak to taste
 }
 
 void ATemporalDashCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -99,6 +107,9 @@ void ATemporalDashCharacter::DoAim(float Yaw, float Pitch)
 
 void ATemporalDashCharacter::DoMove(float Right, float Forward)
 {
+	// Cache input for Hook steering
+	LastMovementInput = FVector(Right, Forward, 0.0f);
+
 	if (GetController())
 	{
 		// pass the move inputs
@@ -109,12 +120,39 @@ void ATemporalDashCharacter::DoMove(float Right, float Forward)
 
 void ATemporalDashCharacter::DoJumpStart()
 {
-	// pass Jump to the character
-	Jump();
+	// If we're on the ground, perform the normal jump and count it
+	if (GetCharacterMovement()->IsMovingOnGround())
+	{
+		Jump();
+		JumpCount = 1;
+	}
+	else
+	{
+		// If we still have jumps left, perform an in-air jump by applying an upward launch
+		if (JumpCount < MaxJumpCount)
+		{
+			// Optionally zero any existing Z velocity to make jumps consistent
+			FVector CurrentVel = GetCharacterMovement()->Velocity;
+			CurrentVel.Z = 0.f;
+			GetCharacterMovement()->Velocity = CurrentVel;
+
+			// Launch upward for the second jump
+			LaunchCharacter(FVector(0.f, 0.f, SecondJumpStrength), false, true);
+			JumpCount++;
+		}
+	}
 }
 
 void ATemporalDashCharacter::DoJumpEnd()
 {
 	// pass StopJumping to the character
 	StopJumping();
+}
+
+void ATemporalDashCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+
+	// Reset jump counter when touching the ground again
+	JumpCount = 0;
 }
