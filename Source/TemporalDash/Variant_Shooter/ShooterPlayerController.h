@@ -74,4 +74,12 @@ protected:
 	/** Called when the possessed pawn is damaged */
 	UFUNCTION()
 	void OnPawnDamaged(float LifePercent);
+
+	/** Called when a weapon is discarded from the possessed pawn */
+	UFUNCTION()
+	void OnWeaponDiscarded(int32 WeaponIndex);
+
+	/** Blueprint implementable event for weapon discard (for UI card removal) */
+	UFUNCTION(BlueprintImplementableEvent, Category="Shooter|UI", meta = (DisplayName = "On Weapon Discarded"))
+	void BP_OnWeaponDiscarded(int32 WeaponIndex);
 };

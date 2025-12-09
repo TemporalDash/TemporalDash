@@ -12,7 +12,7 @@ void ATemporalDashCharacter::DoHookStart(const FInputActionValue& ActionValue)
 {
 	// DEBUG: Check if function is being called
 	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("DoHookStart called!"));
-	
+
 	if (bIsHooked)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Yellow, TEXT("Already hooked, ignoring"));
@@ -36,7 +36,7 @@ void ATemporalDashCharacter::DoHookEnd(const FInputActionValue& ActionValue)
 {
 	// DEBUG: Check if function is being called
 	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Orange, TEXT("DoHookEnd called!"));
-	
+
 	if (bIsHooked)
 	{
 		EndHook();
@@ -55,8 +55,8 @@ bool ATemporalDashCharacter::FindHookPoint(FVector& OutHitLocation)
 	FVector Start = FirstPersonCameraComponent->GetComponentLocation();
 	FVector ForwardVector = FirstPersonCameraComponent->GetForwardVector();
 	FVector End = Start + ForwardVector * HookMaxRange;
-	
-	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, 
+
+	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White,
 		FString::Printf(TEXT("Tracing from camera, Range: %.0f"), HookMaxRange));
 
 	FHitResult HitResult;
@@ -114,8 +114,8 @@ void ATemporalDashCharacter::PerformHook()
 			LaunchCharacter(LaunchVel, false, false);
 		}
 	}
-	
-	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, 
+
+	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green,
 		FString::Printf(TEXT("HOOK ACTIVATED! Rope Length: %.1f"), HookMaxRopeLength));
 }
 

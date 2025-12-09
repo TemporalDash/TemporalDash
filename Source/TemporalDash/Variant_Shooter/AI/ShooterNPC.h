@@ -133,6 +133,9 @@ public:
 	/** Notifies the owner that the weapon cooldown has expired and it's ready to shoot again */
 	virtual void OnSemiWeaponRefire() override;
 
+	/** Called when a weapon runs out of ammo and should be discarded */
+	virtual void DiscardWeapon(AShooterWeapon* Weapon) override;
+
 	//~End IShooterWeaponHolder interface
 
 protected:
