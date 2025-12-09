@@ -93,6 +93,7 @@ void AShooterPlayerController::OnPossess(APawn* InPawn)
 		// subscribe to the pawn's delegates
 		ShooterCharacter->OnBulletCountUpdated.AddDynamic(this, &AShooterPlayerController::OnBulletCountUpdated);
 		ShooterCharacter->OnDamaged.AddDynamic(this, &AShooterPlayerController::OnPawnDamaged);
+		ShooterCharacter->OnWeaponDiscarded.AddDynamic(this, &AShooterPlayerController::OnWeaponDiscarded);
 
 		// force update the life bar
 		ShooterCharacter->OnDamaged.Broadcast(1.0f);
@@ -140,3 +141,16 @@ void AShooterPlayerController::OnPawnDamaged(float LifePercent)
 		BulletCounterUI->BP_Damaged(LifePercent);
 	}
 }
+
+void AShooterPlayerController::OnWeaponDiscarded(int32 WeaponIndex)
+{
+	// forward to BulletCounterUI for card removal
+	if (IsValid(BulletCounterUI))
+	{
+		BulletCounterUI->BP_OnWeaponDiscarded(WeaponIndex);
+	}
+	
+	// also forward to Blueprint implementation for custom handling
+	BP_OnWeaponDiscarded(WeaponIndex);
+}
+

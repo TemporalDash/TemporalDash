@@ -52,6 +52,7 @@ protected:
 	FDataTableRowHandle WeaponType;
 
 	/** Type to weapon to grant on pickup. Set from the weapon data table. */
+	UPROPERTY(BlueprintReadWrite, Category = "Pickup")
 	TSubclassOf<AShooterWeapon> WeaponClass;
 	
 	/** Time to wait before respawning this pickup */

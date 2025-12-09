@@ -8,7 +8,7 @@
 
 class AShooterWeapon;
 class UAnimMontage;
-
+class AShooterPickup;
 
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
@@ -42,7 +42,7 @@ public:
 	virtual FVector GetWeaponTargetLocation() = 0;
 
 	/** Gives a weapon of this class to the owner */
-	virtual void AddWeaponClass(const TSubclassOf<AShooterWeapon>& WeaponClass) = 0;
+	virtual void AddWeaponClass(const TSubclassOf<AShooterWeapon>& WeaponClass, const AShooterPickup* pickup) = 0;
 
 	/** Activates the passed weapon */
 	virtual void OnWeaponActivated(AShooterWeapon* Weapon) = 0;
@@ -52,4 +52,7 @@ public:
 
 	/** Notifies the owner that the weapon cooldown has expired and it's ready to shoot again */
 	virtual void OnSemiWeaponRefire() = 0;
+
+	/** Called when a weapon runs out of ammo and should be discarded */
+	virtual void DiscardWeapon(AShooterWeapon* Weapon) = 0;
 };

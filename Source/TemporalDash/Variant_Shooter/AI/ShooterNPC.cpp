@@ -123,7 +123,7 @@ FVector AShooterNPC::GetWeaponTargetLocation()
 	return OutHit.bBlockingHit ? OutHit.ImpactPoint : OutHit.TraceEnd;
 }
 
-void AShooterNPC::AddWeaponClass(const TSubclassOf<AShooterWeapon>& InWeaponClass)
+void AShooterNPC::AddWeaponClass(const TSubclassOf<AShooterWeapon>& InWeaponClass, const AShooterPickup* pickup)
 {
 	// unused
 }
@@ -141,11 +141,34 @@ void AShooterNPC::OnWeaponDeactivated(AShooterWeapon* InWeapon)
 void AShooterNPC::OnSemiWeaponRefire()
 {
 	// are we still shooting?
-	if (bIsShooting)
+	if (bIsShooting && IsValid(Weapon))
 	{
 		// fire the weapon
 		Weapon->StartFiring();
 	}
+}
+
+void AShooterNPC::DiscardWeapon(AShooterWeapon* WeaponToDiscard)
+{
+	// validate weapon pointer
+	if (!IsValid(WeaponToDiscard))
+	{
+		return;
+	}
+	
+	// stop shooting behavior
+	bIsShooting = false;
+	
+	// note: weapon should already be stopped firing before this is called
+	
+	// if this is the NPC's weapon, clear the reference
+	if (Weapon == WeaponToDiscard)
+	{
+		Weapon = nullptr;
+	}
+	
+	// destroy the weapon actor
+	WeaponToDiscard->Destroy();
 }
 
 void AShooterNPC::Die()
@@ -194,8 +217,11 @@ void AShooterNPC::StartShooting(AActor* ActorToShoot)
 	// raise the flag
 	bIsShooting = true;
 
-	// signal the weapon
-	Weapon->StartFiring();
+	// signal the weapon (check if valid in case it was discarded)
+	if (IsValid(Weapon))
+	{
+		Weapon->StartFiring();
+	}
 }
 
 void AShooterNPC::StopShooting()
@@ -203,6 +229,9 @@ void AShooterNPC::StopShooting()
 	// lower the flag
 	bIsShooting = false;
 
-	// signal the weapon
-	Weapon->StopFiring();
+	// signal the weapon (check if valid in case it was discarded)
+	if (IsValid(Weapon))
+	{
+		Weapon->StopFiring();
+	}
 }

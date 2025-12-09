@@ -122,7 +122,7 @@ public:
 	virtual FVector GetWeaponTargetLocation() override;
 
 	/** Gives a weapon of this class to the owner */
-	virtual void AddWeaponClass(const TSubclassOf<AShooterWeapon>& WeaponClass) override;
+	virtual void AddWeaponClass(const TSubclassOf<AShooterWeapon>& WeaponClass, const AShooterPickup* pickup) override;
 
 	/** Activates the passed weapon */
 	virtual void OnWeaponActivated(AShooterWeapon* Weapon) override;
@@ -132,6 +132,9 @@ public:
 
 	/** Notifies the owner that the weapon cooldown has expired and it's ready to shoot again */
 	virtual void OnSemiWeaponRefire() override;
+
+	/** Called when a weapon runs out of ammo and should be discarded */
+	virtual void DiscardWeapon(AShooterWeapon* Weapon) override;
 
 	//~End IShooterWeaponHolder interface
 

@@ -31,6 +31,16 @@ void AShooterCharacter::BeginPlay()
 
 	// update the HUD
 	OnDamaged.Broadcast(1.0f);
+	
+	// store the default animation classes so they can be restored when no weapon is equipped
+	if (GetFirstPersonMesh() && GetFirstPersonMesh()->GetAnimInstance())
+	{
+		DefaultFirstPersonAnimClass = GetFirstPersonMesh()->GetAnimInstance()->GetClass();
+	}
+	if (GetMesh() && GetMesh()->GetAnimInstance())
+	{
+		DefaultThirdPersonAnimClass = GetMesh()->GetAnimInstance()->GetClass();
+	}
 }
 
 void AShooterCharacter::EndPlay(EEndPlayReason::Type EndPlayReason)
@@ -127,6 +137,9 @@ void AShooterCharacter::DoSwitchWeapon()
 
 		// activate the new weapon
 		CurrentWeapon->ActivateWeapon();
+
+		// Notify BP
+		BP_OnActiveWeaponChanged(WeaponIndex);
 	}
 }
 
@@ -176,7 +189,7 @@ FVector AShooterCharacter::GetWeaponTargetLocation()
 	return OutHit.bBlockingHit ? OutHit.ImpactPoint : OutHit.TraceEnd;
 }
 
-void AShooterCharacter::AddWeaponClass(const TSubclassOf<AShooterWeapon>& WeaponClass)
+void AShooterCharacter::AddWeaponClass(const TSubclassOf<AShooterWeapon>& WeaponClass, const AShooterPickup* pickup)
 {
 	// do we already own this weapon?
 	AShooterWeapon* OwnedWeapon = FindWeaponOfType(WeaponClass);
@@ -195,7 +208,7 @@ void AShooterCharacter::AddWeaponClass(const TSubclassOf<AShooterWeapon>& Weapon
 		if (AddedWeapon)
 		{
 			// add the weapon to the owned list
-			OwnedWeapons.Add(AddedWeapon);
+			int added_idx = OwnedWeapons.Add(AddedWeapon);
 
 			// if we have an existing weapon, deactivate it
 			if (CurrentWeapon)
@@ -206,6 +219,9 @@ void AShooterCharacter::AddWeaponClass(const TSubclassOf<AShooterWeapon>& Weapon
 			// switch to the new weapon
 			CurrentWeapon = AddedWeapon;
 			CurrentWeapon->ActivateWeapon();
+
+			// Notify BP that the active weapon has changed
+			BP_OnWeaponAdded(added_idx, pickup);
 		}
 	}
 }
@@ -228,6 +244,73 @@ void AShooterCharacter::OnWeaponDeactivated(AShooterWeapon* Weapon)
 void AShooterCharacter::OnSemiWeaponRefire()
 {
 	// unused
+}
+
+void AShooterCharacter::DiscardWeapon(AShooterWeapon* WeaponToDiscard)
+{
+	// validate weapon pointer
+	if (!IsValid(WeaponToDiscard))
+	{
+		return;
+	}
+
+	// find the weapon index in the owned list
+	int32 WeaponIndex = OwnedWeapons.Find(WeaponToDiscard);
+	if (WeaponIndex == INDEX_NONE)
+	{
+		return;
+	}
+
+	// deactivate if this is the current weapon
+	if (CurrentWeapon == WeaponToDiscard)
+	{
+		CurrentWeapon->DeactivateWeapon();
+		CurrentWeapon = nullptr;
+	}
+
+	// remove from the owned weapons list
+	OwnedWeapons.RemoveAt(WeaponIndex);
+
+	// notify Blueprint
+	BP_OnWeaponRemoved(WeaponIndex);
+	OnWeaponDiscarded.Broadcast(WeaponIndex);
+
+	// destroy the weapon actor
+	WeaponToDiscard->DestroyWeapon();
+
+	// switch to another weapon if we had discarded the current one and still have weapons
+	if (!CurrentWeapon && OwnedWeapons.Num() > 0)
+	{
+		// clamp the index to the valid range
+		int32 NewIndex = FMath::Clamp(WeaponIndex, 0, OwnedWeapons.Num() - 1);
+		CurrentWeapon = OwnedWeapons[NewIndex];
+		CurrentWeapon->ActivateWeapon();
+		BP_OnActiveWeaponChanged(NewIndex);
+	}
+	else if (OwnedWeapons.Num() == 0)
+	{
+		// no weapons left, reset the bullet counter
+		OnBulletCountUpdated.Broadcast(0, 0);
+		
+		// reset the hand animations to default (no weapon) state
+		if (DefaultFirstPersonAnimClass)
+		{
+			GetFirstPersonMesh()->SetAnimInstanceClass(DefaultFirstPersonAnimClass);
+		}
+		else
+		{
+			GetFirstPersonMesh()->SetAnimInstanceClass(nullptr);
+		}
+		
+		if (DefaultThirdPersonAnimClass)
+		{
+			GetMesh()->SetAnimInstanceClass(DefaultThirdPersonAnimClass);
+		}
+		else
+		{
+			GetMesh()->SetAnimInstanceClass(nullptr);
+		}
+	}
 }
 
 AShooterWeapon* AShooterCharacter::FindWeaponOfType(TSubclassOf<AShooterWeapon> WeaponClass) const

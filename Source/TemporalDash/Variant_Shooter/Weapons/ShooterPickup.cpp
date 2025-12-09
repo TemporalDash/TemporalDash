@@ -42,22 +42,14 @@ void AShooterPickup::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	if (FWeaponTableRow* WeaponData = WeaponType.GetRow<FWeaponTableRow>(FString()))
-	{
-		// set the mesh
-		Mesh->SetStaticMesh(WeaponData->StaticMesh.LoadSynchronous());
-	}
+
 }
 
 void AShooterPickup::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (FWeaponTableRow* WeaponData = WeaponType.GetRow<FWeaponTableRow>(FString()))
-	{
-		// copy the weapon class
-		WeaponClass = WeaponData->WeaponToSpawn;
-	}
+	
 }
 
 void AShooterPickup::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -73,7 +65,7 @@ void AShooterPickup::OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor*
 	// have we collided against a weapon holder?
 	if (IShooterWeaponHolder* WeaponHolder = Cast<IShooterWeaponHolder>(OtherActor))
 	{
-		WeaponHolder->AddWeaponClass(WeaponClass);
+		WeaponHolder->AddWeaponClass(WeaponClass, this);
 
 		// hide this mesh
 		SetActorHiddenInGame(true);

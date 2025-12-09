@@ -21,7 +21,7 @@ void ATemporalDashCharacter::BeginPlay()
 		if (UEnhancedInputComponent* Enhanced = Cast<UEnhancedInputComponent>(IC))
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("Enhanced Input Component found!"));
-			
+
 			// Bind Dash action
 			if (DashAction)
 			{
