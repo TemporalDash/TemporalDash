@@ -8,3 +8,7 @@ void AShooterSkill::FireProjectile(const FVector& TargetLocation) {
 	if (AShooterCharacter* OwnerCharacter = Cast<AShooterCharacter>(WeaponOwner))
 	BP_OnSkillActivate(OwnerCharacter, TargetLocation);
 }
+
+void AShooterSkill::DestroyWeapon() {
+
+}

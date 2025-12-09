@@ -200,4 +200,6 @@ public:
 	int32 GetRemainingMagazines() const { return RemainingMagazines; }
 	/** Returns true if weapon updates HUD every shot */
 	bool ShouldUpdateHUDPerShot() const { return bUpdateHUDPerShot; }
+
+	virtual void DestroyWeapon();
 };

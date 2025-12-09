@@ -276,7 +276,7 @@ void AShooterCharacter::DiscardWeapon(AShooterWeapon* WeaponToDiscard)
 	OnWeaponDiscarded.Broadcast(WeaponIndex);
 
 	// destroy the weapon actor
-	WeaponToDiscard->Destroy();
+	WeaponToDiscard->DestroyWeapon();
 
 	// switch to another weapon if we had discarded the current one and still have weapons
 	if (!CurrentWeapon && OwnedWeapons.Num() > 0)

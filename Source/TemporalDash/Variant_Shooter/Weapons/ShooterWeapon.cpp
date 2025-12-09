@@ -301,3 +301,7 @@ void AShooterWeapon::HandleEmpty()
 		}
 	}
 }
+
+void AShooterWeapon::DestroyWeapon() {
+	this->Destroy();
+}
