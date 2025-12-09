@@ -6,19 +6,11 @@
 #include "GameFramework/Actor.h"
 #include "Engine/DataTable.h"
 #include "Engine/StaticMesh.h"
-#include "Engine/DataAsset.h"
 #include "ShooterPickup.generated.h"
 
 class USphereComponent;
 class UPrimitiveComponent;
 class AShooterWeapon;
-
-UENUM(BlueprintType)
-enum class EPickupType : uint8
-{
-	Weapon UMETA(DisplayName = "Weapon"),
-	Skill  UMETA(DisplayName = "Skill")
-};
 
 /**
  *  Holds information about a type of weapon pickup
@@ -36,7 +28,6 @@ struct FWeaponTableRow : public FTableRowBase
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<AShooterWeapon> WeaponToSpawn;
 };
-
 
 /**
  *  Simple shooter game weapon pickup
@@ -56,22 +47,12 @@ class TEMPORALDASH_API AShooterPickup : public AActor
 	
 protected:
 
-	// [新增] 1. 核心数据资产变量
-    // =========================================================
-    /** 存放你的纯蓝图数据资产 (BP_CardData) */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Card Config")
-    UPrimaryDataAsset* CardAsset;
+	/** Data on the type of picked weapon and visuals of this pickup */
+	UPROPERTY(EditAnywhere, Category="Pickup")
+	FDataTableRowHandle WeaponType;
 
-    // ... (原来的 PickupCategory / WeaponType / SkillCardToGive 可以删掉或者留着不用) ...
-
-    // =========================================================
-    // [修改] 2. 暴露 WeaponClass 给蓝图
-    // =========================================================
-    /** * 原本这里只是 TSubclassOf<AShooterWeapon> WeaponClass;
-     * 我们加上 UPROPERTY(BlueprintReadWrite)，这样你在蓝图的 Construction Script
-     * 就能把 CardData 里的 WeaponClass 塞进这个变量里。
-     */
-	UPROPERTY(Transient, BlueprintReadWrite, Category = "Pickup Logic") 
+	/** Type to weapon to grant on pickup. Set from the weapon data table. */
+	UPROPERTY(BlueprintReadWrite, Category = "Pickup")
 	TSubclassOf<AShooterWeapon> WeaponClass;
 	
 	/** Time to wait before respawning this pickup */
@@ -80,7 +61,6 @@ protected:
 
 	/** Timer to respawn the pickup */
 	FTimerHandle RespawnTimer;
-
 
 public:	
 	
@@ -105,7 +85,6 @@ protected:
 protected:
 
 	/** Called when it's time to respawn this pickup */
-	UFUNCTION(BlueprintCallable, Category = "Pickup Logic")
 	void RespawnPickup();
 
 	/** Passes control to Blueprint to animate the pickup respawn. Should end by calling FinishRespawn */

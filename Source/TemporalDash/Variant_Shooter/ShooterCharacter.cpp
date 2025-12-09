@@ -198,7 +198,7 @@ void AShooterCharacter::AddWeaponClass(const TSubclassOf<AShooterWeapon>& Weapon
 		if (AddedWeapon)
 		{
 			// add the weapon to the owned list
-			OwnedWeapons.Add(AddedWeapon);
+			int added_idx = OwnedWeapons.Add(AddedWeapon);
 
 			// if we have an existing weapon, deactivate it
 			if (CurrentWeapon)
@@ -211,11 +211,8 @@ void AShooterCharacter::AddWeaponClass(const TSubclassOf<AShooterWeapon>& Weapon
 			CurrentWeapon->ActivateWeapon();
 
 			// Notify BP that the active weapon has changed
-			BP_OnActiveWeaponChanged(OwnedWeapons.Num() - 1);
+			BP_OnWeaponAdded(added_idx, pickup);
 		}
-
-		// Notify BP that a new weapon was added
-		BP_OnWeaponAdded(OwnedWeapons.Num() - 1, pickup);
 	}
 }
 
