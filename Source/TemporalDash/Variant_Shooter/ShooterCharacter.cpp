@@ -127,6 +127,9 @@ void AShooterCharacter::DoSwitchWeapon()
 
 		// activate the new weapon
 		CurrentWeapon->ActivateWeapon();
+
+		// Notify BP
+		BP_OnActiveWeaponChanged(WeaponIndex);
 	}
 }
 
@@ -176,7 +179,7 @@ FVector AShooterCharacter::GetWeaponTargetLocation()
 	return OutHit.bBlockingHit ? OutHit.ImpactPoint : OutHit.TraceEnd;
 }
 
-void AShooterCharacter::AddWeaponClass(const TSubclassOf<AShooterWeapon>& WeaponClass)
+void AShooterCharacter::AddWeaponClass(const TSubclassOf<AShooterWeapon>& WeaponClass, const AShooterPickup* pickup)
 {
 	// do we already own this weapon?
 	AShooterWeapon* OwnedWeapon = FindWeaponOfType(WeaponClass);
@@ -206,7 +209,13 @@ void AShooterCharacter::AddWeaponClass(const TSubclassOf<AShooterWeapon>& Weapon
 			// switch to the new weapon
 			CurrentWeapon = AddedWeapon;
 			CurrentWeapon->ActivateWeapon();
+
+			// Notify BP that the active weapon has changed
+			BP_OnActiveWeaponChanged(OwnedWeapons.Num() - 1);
 		}
+
+		// Notify BP that a new weapon was added
+		BP_OnWeaponAdded(OwnedWeapons.Num() - 1, pickup);
 	}
 }
 

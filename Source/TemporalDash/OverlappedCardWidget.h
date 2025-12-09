@@ -65,7 +65,7 @@ public:
 
     /** Insert a new card widget at a given index. */
     UFUNCTION(BlueprintCallable, Category = "Cards")
-    virtual void InsertCard(int32 Index, UObject* CardDataObject);
+    virtual int InsertCard(int32 Index, UObject* CardDataObject);
 
     /** Remove a card widget at a given index. */
     UFUNCTION(BlueprintCallable, Category = "Cards")
@@ -77,7 +77,7 @@ public:
 
     /** Highlight one card. */
     UFUNCTION(BlueprintCallable, Category = "Cards")
-    virtual void HighlightCard(int32 Index);
+    virtual UObject* HighlightCard(int32 Index);
 
     /** Recalculate layout positions. */
     UFUNCTION(BlueprintCallable, Category = "Cards")

@@ -11,6 +11,7 @@ class AShooterWeapon;
 class UInputAction;
 class UInputComponent;
 class UPawnNoiseEmitterComponent;
+class AShooterPickup;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FBulletCountUpdatedDelegate, int32, MagazineSize, int32, Bullets);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDamagedDelegate, float, LifePercent);
@@ -136,7 +137,7 @@ public:
 	virtual FVector GetWeaponTargetLocation() override;
 
 	/** Gives a weapon of this class to the owner */
-	virtual void AddWeaponClass(const TSubclassOf<AShooterWeapon>& WeaponClass) override;
+	virtual void AddWeaponClass(const TSubclassOf<AShooterWeapon>& WeaponClass, const AShooterPickup* pickup) override;
 
 	/** Activates the passed weapon */
 	virtual void OnWeaponActivated(AShooterWeapon* Weapon) override;
@@ -160,6 +161,18 @@ protected:
 	/** Called to allow Blueprint code to react to this character's death */
 	UFUNCTION(BlueprintImplementableEvent, Category="Shooter", meta = (DisplayName = "On Death"))
 	void BP_OnDeath();
+
+	/** Called when a new weapon is added to the inventory */
+	UFUNCTION(BlueprintImplementableEvent, Category="Shooter", meta = (DisplayName = "On Weapon Added"))
+	void BP_OnWeaponAdded(int32 NewIndex, const AShooterPickup* pickup);
+
+	/** Called when a weapon is removed from the inventory */
+	UFUNCTION(BlueprintImplementableEvent, Category="Shooter", meta = (DisplayName = "On Weapon Removed"))
+	void BP_OnWeaponRemoved(int32 RemovedIndex);
+
+	/** Called when the active weapon changes */
+	UFUNCTION(BlueprintImplementableEvent, Category="Shooter", meta = (DisplayName = "On Active Weapon Changed"))
+	void BP_OnActiveWeaponChanged(int32 NewIndex);
 
 	/** Called from the respawn timer to destroy this character and force the PC to respawn */
 	void OnRespawn();

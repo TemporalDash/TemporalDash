@@ -24,24 +24,25 @@ void UOverlappedCardWidget::SetCards(const TArray<UObject*>& NewCards)
     }
 }
 
-void UOverlappedCardWidget::InsertCard(int32 Index, UObject* CardDataObject)
+int UOverlappedCardWidget::InsertCard(int32 Index, UObject* CardDataObject)
 {
     if (!CardContainer || !CardWidgetClass || !CardDataObject)
-        return;
+        return -1;
 
     Index = FMath::Clamp(Index, 0, CardWidgets.Num());
 
     UUserWidget* NewCard = CreateWidget<UUserWidget>(GetWorld(), CardWidgetClass);
-    if (!NewCard) return;
+    if (!NewCard) return -1;
 
     UPanelSlot* NewSlot = CardContainer->AddChild(NewCard);
-    CardWidgets.Insert(NewCard, Index);
+    int new_idx = CardWidgets.Insert(NewCard, Index);
     CardData.Insert(CardDataObject, Index);
     TargetPositions.Insert(0.f, Index);
 
     OnCardCreated(NewCard, CardDataObject);
 
     UpdateLayoutTargets();
+    return new_idx;
 }
 
 void UOverlappedCardWidget::RemoveCard(int32 Index)
@@ -70,13 +71,14 @@ void UOverlappedCardWidget::ClearCards()
     HighlightIndex = INDEX_NONE;
 }
 
-void UOverlappedCardWidget::HighlightCard(int32 Index)
+UObject* UOverlappedCardWidget::HighlightCard(int32 Index)
 {
     if (Index < 0 || Index >= CardWidgets.Num())
-        return;
+        return nullptr;
 
     HighlightIndex = Index;
     UpdateLayoutTargets();
+    return CardData[Index];
 }
 
 void UOverlappedCardWidget::UpdateLayoutTargets()
@@ -119,20 +121,20 @@ void UOverlappedCardWidget::UpdateLayoutTargets()
         OverlapNormal = FMath::Clamp(RequiredOverlap, CardWidth * MinOverlapRatio, CardWidth * MaxOverlapRatio);
     }
 
-    float CurrentX = ContainerWidth; // - CardWidth; // rightmost card start
+    float CurrentX = 0; // - CardWidth; // rightmost card start
 
-    for (int32 i = N - 1; i >= 0; --i)
+    for (int32 i = 0; i < N; ++i)
     {
+        TargetPositions[i] = CurrentX;
 
         if (i == HighlightIndex)
         {
-            CurrentX -= (CardWidth - HighlightOverlapPixels);
+            CurrentX += (CardWidth - HighlightOverlapPixels);
         }
         else
         {
-            CurrentX -= (CardWidth - OverlapNormal);
+            CurrentX += (CardWidth - OverlapNormal);
         }
-        TargetPositions[i] = CurrentX;
     }
 }
 
