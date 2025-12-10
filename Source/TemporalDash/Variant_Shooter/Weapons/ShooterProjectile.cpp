@@ -12,6 +12,7 @@
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "BreakableStructure.h"
 
 AShooterProjectile::AShooterProjectile()
 {
@@ -157,6 +158,12 @@ void AShooterProjectile::ProcessHit(AActor* HitActor, UPrimitiveComponent* HitCo
 	{
 		// give some physics impulse to the object
 		HitComp->AddImpulseAtLocation(HitDirection * PhysicsForce, HitLocation);
+	}
+
+	if (bExplodeOnHit) {
+		if (ABreakableStructure* Breakable = Cast<ABreakableStructure>(HitActor)) {
+			Breakable->OnDestruction(HitLocation);
+		}
 	}
 }
 

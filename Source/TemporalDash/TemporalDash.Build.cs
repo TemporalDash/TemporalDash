@@ -18,7 +18,10 @@ public class TemporalDash : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
-			"Slate"
+			"Slate",
+			"GeometryCollectionEngine",
+			"FieldSystemEngine",
+			"ChaosSolverEngine"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
