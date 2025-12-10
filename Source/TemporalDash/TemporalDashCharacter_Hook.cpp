@@ -7,6 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "DrawDebugHelpers.h"
 #include "InputActionValue.h"
+#include "Variant_Shooter/Weapons/ShooterProjectile.h"
 
 void ATemporalDashCharacter::DoHookStart(const FInputActionValue& ActionValue)
 {
@@ -81,8 +82,31 @@ bool ATemporalDashCharacter::FindHookPoint(FVector& OutHitLocation)
 
 	if (bHit)
 	{
-			OutHitLocation = HitResult.ImpactPoint;
-			return true;
+		AActor* HitActor = HitResult.GetActor();
+		if (HitActor)
+		{
+			// 1. Check for Projectile (C++ Class)
+			// Requires #include "Variant_Shooter/Weapons/ShooterProjectile.h"
+			bool bIsProjectile = (Cast<AShooterProjectile>(HitActor) != nullptr);
+
+			// 2. Check for Hook_Detection (Blueprint Class)
+			// In C++, we cannot directly cast to a Blueprint class.
+			// We check the class name instead.
+			bool bIsHookDetection = HitActor->GetClass()->GetName().Contains(TEXT("Hook_Detection"));
+
+			if (bIsProjectile || bIsHookDetection)
+			{
+				OutHitLocation = HitResult.ImpactPoint;
+				return true;
+			}
+			else
+			{
+				#if !UE_BUILD_SHIPPING
+				GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, 
+					FString::Printf(TEXT("Cannot hook to: %s"), *HitActor->GetName()));
+				#endif
+			}
+		}
 	}
 
 	return false;
