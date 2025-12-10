@@ -21,10 +21,24 @@ protected:
 public:
 	virtual void DestroyWeapon() override;
 
+	virtual void ActivateWeapon();
+
+	/** Deactivates this weapon */
+	virtual void DeactivateWeapon();
+
 	/** Called when the active weapon changes */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Shooter", meta = (DisplayName = "On Skill Activate"))
 	void BP_OnSkillActivate(const AShooterCharacter* caster, const FVector& TargetLocation);
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Cleanup", meta = (DisplayName = "On Skill Added"))
+	void BP_OnSkillAdded();
+
 	UFUNCTION(BlueprintImplementableEvent, Category="Cleanup", meta = (DisplayName = "On Skill Destroy"))
 	void BP_OnSkillDestroy();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Cleanup", meta = (DisplayName = "On Skill Enable"))
+	void BP_OnSkillEnable();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Cleanup", meta = (DisplayName = "On Skill Disable"))
+	void BP_OnSkillDisable();
 };

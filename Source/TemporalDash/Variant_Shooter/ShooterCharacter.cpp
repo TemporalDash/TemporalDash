@@ -12,6 +12,7 @@
 #include "Camera/CameraComponent.h"
 #include "TimerManager.h"
 #include "ShooterGameMode.h"
+#include "ShooterSkill.h"
 
 AShooterCharacter::AShooterCharacter()
 {
@@ -222,6 +223,11 @@ void AShooterCharacter::AddWeaponClass(const TSubclassOf<AShooterWeapon>& Weapon
 
 			// Notify BP that the active weapon has changed
 			BP_OnWeaponAdded(added_idx, pickup);
+
+			// check if added weapon is a skill
+			if (AShooterSkill* AddedSkill = Cast<AShooterSkill>(AddedWeapon)) {
+				AddedSkill->BP_OnSkillAdded();
+			}
 		}
 	}
 }

@@ -10,5 +10,14 @@ void AShooterSkill::FireProjectile(const FVector& TargetLocation) {
 }
 
 void AShooterSkill::DestroyWeapon() {
+	BP_OnSkillDestroy();
+}
 
+void AShooterSkill::ActivateWeapon() {
+	BP_OnSkillEnable();
+}
+
+/** Deactivates this weapon */
+void AShooterSkill::DeactivateWeapon() {
+	BP_OnSkillDisable();
 }
