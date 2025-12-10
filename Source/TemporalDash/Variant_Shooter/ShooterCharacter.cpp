@@ -192,42 +192,36 @@ FVector AShooterCharacter::GetWeaponTargetLocation()
 
 void AShooterCharacter::AddWeaponClass(const TSubclassOf<AShooterWeapon>& WeaponClass, const AShooterPickup* pickup)
 {
-	// do we already own this weapon?
-	AShooterWeapon* OwnedWeapon = FindWeaponOfType(WeaponClass);
+	// spawn the new weapon
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	SpawnParams.TransformScaleMethod = ESpawnActorScaleMethod::MultiplyWithRoot;
 
-	if (!OwnedWeapon)
+	AShooterWeapon* AddedWeapon = GetWorld()->SpawnActor<AShooterWeapon>(WeaponClass, GetActorTransform(), SpawnParams);
+
+	if (AddedWeapon)
 	{
-		// spawn the new weapon
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Owner = this;
-		SpawnParams.Instigator = this;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		SpawnParams.TransformScaleMethod = ESpawnActorScaleMethod::MultiplyWithRoot;
+		// add the weapon to the owned list
+		int added_idx = OwnedWeapons.Add(AddedWeapon);
 
-		AShooterWeapon* AddedWeapon = GetWorld()->SpawnActor<AShooterWeapon>(WeaponClass, GetActorTransform(), SpawnParams);
-
-		if (AddedWeapon)
+		// if we have an existing weapon, deactivate it
+		if (CurrentWeapon)
 		{
-			// add the weapon to the owned list
-			int added_idx = OwnedWeapons.Add(AddedWeapon);
+			CurrentWeapon->DeactivateWeapon();
+		}
 
-			// if we have an existing weapon, deactivate it
-			if (CurrentWeapon)
-			{
-				CurrentWeapon->DeactivateWeapon();
-			}
+		// switch to the new weapon
+		CurrentWeapon = AddedWeapon;
+		CurrentWeapon->ActivateWeapon();
 
-			// switch to the new weapon
-			CurrentWeapon = AddedWeapon;
-			CurrentWeapon->ActivateWeapon();
+		// Notify BP that the active weapon has changed
+		BP_OnWeaponAdded(added_idx, pickup);
 
-			// Notify BP that the active weapon has changed
-			BP_OnWeaponAdded(added_idx, pickup);
-
-			// check if added weapon is a skill
-			if (AShooterSkill* AddedSkill = Cast<AShooterSkill>(AddedWeapon)) {
-				AddedSkill->BP_OnSkillAdded();
-			}
+		// check if added weapon is a skill
+		if (AShooterSkill* AddedSkill = Cast<AShooterSkill>(AddedWeapon)) {
+			AddedSkill->BP_OnSkillAdded();
 		}
 	}
 }
