@@ -12,32 +12,23 @@
 
 void ATemporalDashCharacter::DoHookStart(const FInputActionValue& ActionValue)
 {
-	// DEBUG: Check if function is being called
-	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("DoHookStart called!"));
 
 	if (bIsHooked)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Yellow, TEXT("Already hooked, ignoring"));
 		return;
 	}
 
 	FVector HitLocation;
 	if (FindHookPoint(HitLocation))
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Cyan, TEXT("Hook point found!"));
 		HookPoint = HitLocation;
 		PerformHook();
-	}
-	else
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("No hook point found"));
 	}
 }
 
 void ATemporalDashCharacter::DoHookEnd(const FInputActionValue& ActionValue)
 {
 	// DEBUG: Check if function is being called
-	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Orange, TEXT("DoHookEnd called!"));
 
 	if (bIsHooked)
 	{
@@ -49,7 +40,6 @@ bool ATemporalDashCharacter::FindHookPoint(FVector& OutHitLocation)
 {
 	if (!FirstPersonCameraComponent)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("ERROR: No camera component!"));
 		return false;
 	}
 
@@ -57,9 +47,6 @@ bool ATemporalDashCharacter::FindHookPoint(FVector& OutHitLocation)
 	FVector Start = FirstPersonCameraComponent->GetComponentLocation();
 	FVector ForwardVector = FirstPersonCameraComponent->GetForwardVector();
 	FVector End = Start + ForwardVector * HookMaxRange;
-
-	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White,
-		FString::Printf(TEXT("Tracing from camera, Range: %.0f"), HookMaxRange));
 
 	FHitResult HitResult;
 	FCollisionQueryParams QueryParams;
@@ -92,11 +79,6 @@ bool ATemporalDashCharacter::FindHookPoint(FVector& OutHitLocation)
 
 			bIsHookable = bIsProjectile || bIsHookableActor;
 
-			#if !UE_BUILD_SHIPPING
-			GEngine->AddOnScreenDebugMessage(-1, 2.0f, bIsHookable ? FColor::Green : FColor::Orange,
-				FString::Printf(TEXT("Hit: %s | Hookable: %s"),
-					*HitActor->GetName(), bIsHookable ? TEXT("YES") : TEXT("NO")));
-			#endif
 		}
 	}
 
@@ -110,32 +92,9 @@ bool ATemporalDashCharacter::FindHookPoint(FVector& OutHitLocation)
 	}
 	#endif
 
-	if (bIsHookable)
-	{
-		// Use custom hook point if it's a HookableActor, otherwise use impact point
-		if (HookableActor)
-		{
-			OutHitLocation = HookableActor->GetHookPoint();
-			// Store reference and notify the hookable actor
-			CurrentHookedActor = HookableActor;
-			HookableActor->OnHooked(this);
-		}
-		else
-		{
-			OutHitLocation = HitResult.ImpactPoint;
-			CurrentHookedActor = nullptr;
-		}
-		return true;
-	}
-	else if (bHit && HitActor)
-	{
-		#if !UE_BUILD_SHIPPING
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red,
-			FString::Printf(TEXT("Cannot hook to: %s"), *HitActor->GetName()));
-		#endif
-	}
+	OutHitLocation = HitResult.ImpactPoint;
 
-	return false;
+	return bIsHookable;
 }
 
 void ATemporalDashCharacter::PerformHook()
@@ -165,8 +124,6 @@ void ATemporalDashCharacter::PerformHook()
 		}
 	}
 
-	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green,
-		FString::Printf(TEXT("HOOK ACTIVATED! Rope Length: %.1f"), HookMaxRopeLength));
 }
 
 void ATemporalDashCharacter::UpdateHookMovement(float DeltaTime)
@@ -254,9 +211,6 @@ void ATemporalDashCharacter::UpdateHookMovement(float DeltaTime)
 	// Debug visualization
 	#if !UE_BUILD_SHIPPING
 	DrawDebugLine(GetWorld(), ActorLocation, HookPoint, FColor::Cyan, false, 0.0f, 0, 3.0f);
-	DrawDebugString(GetWorld(), ActorLocation + FVector(0, 0, 100), 
-			FString::Printf(TEXT("Speed: %.0f | Dist: %.0f"), VelocityMagnitude, DistanceToHook),
-			nullptr, FColor::White, 0.0f);
 	#endif
 }
 

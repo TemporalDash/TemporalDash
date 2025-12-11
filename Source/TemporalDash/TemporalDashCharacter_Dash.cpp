@@ -12,25 +12,16 @@ void ATemporalDashCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// DEBUG: Check BeginPlay is called
-	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Magenta, TEXT("Character BeginPlay called"));
-
 	// Try to bind actions if InputComponent is available and is an EnhancedInputComponent
 	if (UInputComponent* IC = InputComponent)
 	{
 		if (UEnhancedInputComponent* Enhanced = Cast<UEnhancedInputComponent>(IC))
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("Enhanced Input Component found!"));
 
 			// Bind Dash action
 			if (DashAction)
 			{
 				Enhanced->BindAction(DashAction, ETriggerEvent::Started, this, &ATemporalDashCharacter::DoDashStart);
-				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Cyan, TEXT("Dash action bound!"));
-			}
-			else
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("WARNING: DashAction is NULL!"));
 			}
 
 			// Bind Hook actions
@@ -38,21 +29,8 @@ void ATemporalDashCharacter::BeginPlay()
 			{
 				Enhanced->BindAction(Hook, ETriggerEvent::Started, this, &ATemporalDashCharacter::DoHookStart);
 				Enhanced->BindAction(Hook, ETriggerEvent::Completed, this, &ATemporalDashCharacter::DoHookEnd);
-				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Cyan, TEXT("Hook action bound!"));
-			}
-			else
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("WARNING: Hook is NULL!"));
 			}
 		}
-		else
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("ERROR: Not Enhanced Input Component!"));
-		}
-	}
-	else
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("ERROR: No Input Component!"));
 	}
 }
 
