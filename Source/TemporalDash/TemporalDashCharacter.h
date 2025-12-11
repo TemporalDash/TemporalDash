@@ -149,6 +149,10 @@ protected:
 	float HookMaxRopeLength = 0.f;
 	FVector LastMovementInput;  // Cache player input direction
 
+	/** The actor we're currently hooked to (if any) */
+	UPROPERTY()
+	TWeakObjectPtr<class AHookableActor> CurrentHookedActor;
+
 	// Input handlers
 	void DoHookStart(const FInputActionValue& ActionValue);
 	void DoHookEnd(const FInputActionValue& ActionValue);

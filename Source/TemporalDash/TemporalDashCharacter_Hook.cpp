@@ -3,6 +3,7 @@
 
 #include "TemporalDashCharacter.h"
 #include "TemporalDash.h"
+#include "HookableActor.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "DrawDebugHelpers.h"
@@ -72,41 +73,66 @@ bool ATemporalDashCharacter::FindHookPoint(FVector& OutHitLocation)
 			QueryParams
 	);
 
-	#if !UE_BUILD_SHIPPING
-	DrawDebugLine(GetWorld(), Start, End, bHit ? FColor::Green : FColor::Red, false, 2.0f, 0, 2.0f);
+	// Determine if the hit target is hookable
+	bool bIsHookable = false;
+	AActor* HitActor = nullptr;
+	AHookableActor* HookableActor = nullptr;
+
 	if (bHit)
 	{
-			DrawDebugSphere(GetWorld(), HitResult.ImpactPoint, 25.0f, 12, FColor::Yellow, false, 2.0f);
+		HitActor = HitResult.GetActor();
+		if (HitActor)
+		{
+			// 1. Check for Projectile (C++ Class) - can hook to projectiles
+			bool bIsProjectile = (Cast<AShooterProjectile>(HitActor) != nullptr);
+
+			// 2. Check for HookableActor (C++ base class and all BP children)
+			HookableActor = Cast<AHookableActor>(HitActor);
+			bool bIsHookableActor = (HookableActor != nullptr) && HookableActor->CanBeHooked();
+
+			bIsHookable = bIsProjectile || bIsHookableActor;
+
+			#if !UE_BUILD_SHIPPING
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, bIsHookable ? FColor::Green : FColor::Orange,
+				FString::Printf(TEXT("Hit: %s | Hookable: %s"),
+					*HitActor->GetName(), bIsHookable ? TEXT("YES") : TEXT("NO")));
+			#endif
+		}
+	}
+
+	// Draw debug line with correct color: Green = hookable, Red = not hookable or no hit
+	#if !UE_BUILD_SHIPPING
+	DrawDebugLine(GetWorld(), Start, End, bIsHookable ? FColor::Green : FColor::Red, false, 2.0f, 0, 2.0f);
+	if (bHit)
+	{
+		DrawDebugSphere(GetWorld(), HitResult.ImpactPoint, 25.0f, 12,
+			bIsHookable ? FColor::Yellow : FColor::Orange, false, 2.0f);
 	}
 	#endif
 
-	if (bHit)
+	if (bIsHookable)
 	{
-		AActor* HitActor = HitResult.GetActor();
-		if (HitActor)
+		// Use custom hook point if it's a HookableActor, otherwise use impact point
+		if (HookableActor)
 		{
-			// 1. Check for Projectile (C++ Class)
-			// Requires #include "Variant_Shooter/Weapons/ShooterProjectile.h"
-			bool bIsProjectile = (Cast<AShooterProjectile>(HitActor) != nullptr);
-
-			// 2. Check for Hook_Detection (Blueprint Class)
-			// In C++, we cannot directly cast to a Blueprint class.
-			// We check the class name instead.
-			bool bIsHookDetection = HitActor->GetClass()->GetName().Contains(TEXT("Hook_Detection"));
-
-			if (bIsProjectile || bIsHookDetection)
-			{
-				OutHitLocation = HitResult.ImpactPoint;
-				return true;
-			}
-			else
-			{
-				#if !UE_BUILD_SHIPPING
-				GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, 
-					FString::Printf(TEXT("Cannot hook to: %s"), *HitActor->GetName()));
-				#endif
-			}
+			OutHitLocation = HookableActor->GetHookPoint();
+			// Store reference and notify the hookable actor
+			CurrentHookedActor = HookableActor;
+			HookableActor->OnHooked(this);
 		}
+		else
+		{
+			OutHitLocation = HitResult.ImpactPoint;
+			CurrentHookedActor = nullptr;
+		}
+		return true;
+	}
+	else if (bHit && HitActor)
+	{
+		#if !UE_BUILD_SHIPPING
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red,
+			FString::Printf(TEXT("Cannot hook to: %s"), *HitActor->GetName()));
+		#endif
 	}
 
 	return false;
@@ -237,6 +263,13 @@ void ATemporalDashCharacter::UpdateHookMovement(float DeltaTime)
 void ATemporalDashCharacter::EndHook()
 {
 	bIsHooked = false;
+
+	// Notify the hooked actor that we're releasing
+	if (CurrentHookedActor.IsValid())
+	{
+		CurrentHookedActor->OnHookReleased(this);
+		CurrentHookedActor = nullptr;
+	}
 
 	// Restore normal movement settings
 	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
