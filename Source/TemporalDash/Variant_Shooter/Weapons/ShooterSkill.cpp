@@ -3,6 +3,7 @@
 
 #include "Variant_Shooter/Weapons/ShooterSkill.h"
 #include "Variant_Shooter/ShooterCharacter.h"
+#include "Variant_Shooter/Weapons/ShooterWeapon.h"
 
 void AShooterSkill::FireProjectile(const FVector& TargetLocation) {
 	if (AShooterCharacter* OwnerCharacter = Cast<AShooterCharacter>(WeaponOwner))
@@ -13,11 +14,13 @@ void AShooterSkill::DestroyWeapon() {
 	BP_OnSkillDestroy();
 }
 
-void AShooterSkill::ActivateWeapon() {
+void AShooterSkill::ActivateWeapon(){
+	Super::ActivateWeapon();
 	BP_OnSkillEnable();
 }
 
 /** Deactivates this weapon */
 void AShooterSkill::DeactivateWeapon() {
+	Super::DeactivateWeapon();
 	BP_OnSkillDisable();
 }
